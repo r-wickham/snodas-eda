@@ -2,6 +2,23 @@
 .Rhistory
 .Rapp.history
 
+# Folders with downloadable data
+/data/
+/temp/
+
+# Shapefiles
+*.dbf
+*.cpg
+*.prj
+*.shp
+*.sbn
+*.shx
+*.xml
+
+# Rasters
+*.tif
+*.tiff
+
 # Session Data files
 .RData
 
