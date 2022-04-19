@@ -34,10 +34,22 @@ demUrlTemplate <- paste0("https://prd-tnm.s3.amazonaws.com/StagedProducts/",
 proj4String_wgs84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 
 #' Download DEM to tif format, returning the download file location
-dlTif <- function(urlString){
-  library(curl)
-  if(!dir.exists("temp")) dir.create("temp")
-  toFile <- sprintf("temp/%s", basename(urlString))
+dlTif <- function(northingWestingString){
+  if(!dir.exists(rawUsgsdemDir)) dir.create(rawUsgsdemDir)
+  
+  # Check if a DEM already downloaded
+  regExFile <- sprintf("USGS_1_%s.*.tif", northingWestingString)
+  toFile <- list.files(path = rawUsgsdemDir,
+                       pattern = regExFile,
+                       full.names = T)
+  if(length(toFile) >= 1){
+    writeLog(sprintf("\nLoading DEM from file:\t%s", toFile[1]))
+    return(toFile[1])
+  }
+  # Create url, download file, return file location
+  urlString <- findUrlForNorthingWestingDEM(northingWestingString)
+  toFile <- sprintf("%s/%s", rawUsgsdemDir, basename(urlString))
+  writeLog(sprintf("\nLoading DEM from url:\t%s", toFile[1]))
   try(curl::curl_download(url = urlString, destfile = toFile, quiet=T))
   toFile
 }
@@ -78,6 +90,8 @@ findUrlForNorthingWestingDEM <- function(northingWestingString, debug = F){
                            northingWestingString,
                            northingWestingString,
                            dateString)
+        
+        writeLog(sprintf("Searching for raster url:\t%s", testUrl))
         if(urlExists(testUrl)){
           return(testUrl)
         }
@@ -118,31 +132,32 @@ getMaxExtents <- function(exObj, roundDigit = 1){
 #' Download the USGS 1-arc second DEM given an extent object or
 #'   an ojbect that may be converted to an shape object
 #' @param shpObj Spatial* object that extents can be extracted from
-#' @return 1 arc-second raster spanning full extents of Spatial* object
+#' @return 1 arc-second raster spanning extents of Spatial* object
 getOneArcSecDemFromShp <- function(shpObj){
-  # Does it make sense to save DEM to temp/cache dir to load faster 
-  #  next time?  Check to see how much space is needed for a 
-  #  single 1-arcS DEM - looks like 2 kB, so yes  Maybe just
-  #  download the whole US datset?
-  
-  # Should this be done in parallel in case there are a lot of
-  #   DEMs to download?
-  
   tryCatch({
-    
+    # Create a cache file name
+    cacheFileName <- sprintf("%s/%s.tif",
+                             cacheDemDir,
+                             hash(shpObj))
+    if(file.exists(cacheFileName))
+      return(raster(cacheFileName))
     # Interpret extents to northing-westing string(s)
-    nwStrings <- shpObj %>%
+    nwStrings <-
+      shpObj %>%
       extentsToNWStrings()
-    
+    # Create compute cluster
     cl <- makeCluster(min(detectCores()-1, length(nwStrings)))
-    
+    # Load libraries
     clusterEvalQ(cl = cl,
                  expr = {library(curl); library(purrr); library(raster)})
+    # Export objects to compute nodes
     clusterExport(cl = cl,
-                  varlist = c("dlTif",
+                  varlist = c("demUrlTemplate",
+                              "dlTif",
                               "findUrlForNorthingWestingDEM",
-                              "demUrlTemplate",
-                              "urlExists"))
+                              "rawUsgsdemDir",
+                              "urlExists",
+                              "writeLog"))
     # Download USGS 1-arc second DEMs
     out <-
       clusterMap(cl = cl,
@@ -150,12 +165,16 @@ getOneArcSecDemFromShp <- function(shpObj){
                  northingWestingString = nwStrings) %>%
       compact() %>%
       reduce(merge)
-    
+    # Clip to shape object extents
+    out <- raster::crop(x = out, y = shpObj)
+    # Save cache file
+    writeRaster(x = out, filename = cacheFileName)
     return(out)
   }, error =function(e){
     return(NULL)
   }, finally = {
-    stopCluster(cl)
+    if(exists("cl"))
+      stopCluster(cl)
   })
 }
 
@@ -166,17 +185,19 @@ getOneArcSecDemFromShp <- function(shpObj){
 getRasterFromNWString <- function(northingWestingString){
   library(purrr)
   library(raster)
-  cat(sprintf("\n%s", northingWestingString))
   northingWestingString %>%
-    findUrlForNorthingWestingDEM() %>%
     dlTif() %>%
     raster()
 }
 
 ### Test ----------------------------------------------------------------------
 
-# shp <- readOGR(dsn = "data/vector/test/WBDHU6.shp")
-# dem <- getOneArcSecDemFromShp(shp)
-# 
-# plot(dem)
-# plot(shp, add = T)
+if(F){
+  system.time({
+    source("webapp/global.R")
+    shpObj <- readOGR(dsn = "data/vector/test/WBDHU6.shp")
+    dem <- getOneArcSecDemFromShp(shpObj)
+    plot(dem)
+    plot(shpObj, add = T)
+  })
+}

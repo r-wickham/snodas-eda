@@ -1,6 +1,8 @@
 
 # Directory definitions
-rawUsgsdemDir: raster/raw_usgs_dem
+rawUsgsdemDir: data/raster/usgs_dem_raw
+rawSnodasTarDir: data/snodas_tar
+cacheDemDir: data/raster/usgs_dem_cache
 
 
 

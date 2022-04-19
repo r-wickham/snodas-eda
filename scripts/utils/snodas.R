@@ -85,11 +85,14 @@ snodasCRS <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 #' By default, will download to a temporary file location
 #' @param dateObj  Date or string object defining date at which to download 
 #'                   SNODAS tar file
-#' @param toFile   File location at which to download
 #' @return         String, location of downloaded tar file
 downloadSnodasTar <- 
-  function(dateObj = Sys.Date() - 1,
-           toFile = tempfile(fileext = sprintf("_%s.tar", Sys.Date()))){
+  function(dateObj = Sys.Date() - 1){
+    toFile = sprintf("%s/%s.tar",
+                     rawSnodasTarDir,
+                     format(Sys.Date(), "%Y-%m-%d"))
+    if(file.exists(toFile))
+      return(toFile)
     urlString <- formSnodasDlurl(dateObj)
     try(curl::curl_download(urlString, toFile, quiet=T))
     toFile
@@ -122,6 +125,13 @@ formSnodasDlurl <- function(date){
 #' @param date    Date or string object defining date.  By default, will use
 #'                 yesterday's date
 #' @param parType String defining SNODAS parameter type to load
+#'                  Options are "swe", "snow depth", 
+#'                  "snow melt runoff at the base of the snow pack",
+#'                  "sublimination from the snow pack",
+#'                  "sublimination from blowing snow",
+#'                  "solid precipitation",
+#'                  "liquid precipitation",
+#'                  or "snow pack average temperature"
 #' @return raster object
 getSnodas <- function(date = Sys.Date() - 1, parType = "swe"){
   downloadSnodasTar(dateObj = date) %>%
@@ -167,7 +177,7 @@ untarSnodasFileToDir <- function(tarFileName){
   tryCatch({
     # Establishing directory to untar the results
     gzDir <- gsub(".tar","",tarFileName)
-    system(sprintf('"%s" e -o"%s" "%s"', sevenZipExe, gzDir, tarFileName))
+    system(sprintf('"%s" e -y -o"%s" "%s"', sevenZipExe, gzDir, tarFileName))
     # Return the .gz files in the unpacked dir
     return(dir(gzDir, full.names = T, pattern = "*.dat.gz"))
   },
