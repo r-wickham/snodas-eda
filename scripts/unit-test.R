@@ -6,41 +6,57 @@
 source("webapp/global.R")
 
 # Load shapefile, DEM, and SNODAS
-shpObj <- rgdal::readOGR(dsn = "data/vector/test/WBDHU6.shp")
-dem <- getOneArcSecDemFromShp(shpObj)
-s <- getSnodas()
+polyObj <- rgdal::readOGR(dsn = "data/vector/test/WBDHU6.shp")
+baseRaster <- getOneArcSecDemFromShp(polyObj)
+extractRasters <- getSnodas()
 
-extractPtsFromTwoRastersInPoygon <-
-  function(baseRaster, extractRaster, polyObj){
+
+### CONTINUE HERE
+# May want to swap base/extract rasters
+# logic for polyObj = NULL
+
+extractPtsFromTwoRastersInPoly <-
+  function(baseRaster, extractRasters, polyObj = NULL){
     
-    # Clip SNODAS raster to polygon extents
-    b <- raster::crop(x = baseRaster, y = polyObj)
+    tryCatch({
+      # Clip base and extract raster to polygon extents
+      b <- raster::crop(x = baseRaster, y = polyObj)
+      e <- raster::crop(x = extractRasters, y = polyObj)
+      
+      # Extract points from polygon
+      pPts <- polyToPts(polyObj)
+      
+      # Pull points from extract raster
+      sXY <- 
+        rasterToPoints(x = e) %>%
+        as.data.frame()
+      
+      sXY %>%
+        select(c("x","y")) %>%
+        mutate(
+          base = raster::extract(x = baseRaster, y = .),
+          inPoly = sp::point.in.polygon(point.x = x,
+                                        point.y = y,
+                                        pol.x = pPts$x,
+                                        pol.y = pPts$y),
+          extract = sXY$layer
+        )
+    }, error = function(e){
+      message(e)
+      return(NULL)
+    })
     
-    # Extract points from polygon
-    pPts <- polyToPts(polyObj)
     
-    # Pull points from SNODAS raster
-    sXY <- rasterToPoints(x = b) %>%
-      as.data.frame()
-    
-    sXY %>%
-      select(c("x","y")) %>%
-      mutate(
-        dem = raster::extract(x = extractRaster, y = .),
-        inBasin = sp::point.in.polygon(point.x = x,
-                                       point.y = y,
-                                       pol.x = pPts$x,
-                                       pol.y = pPts$y),
-        snodas = sXY$layer
-      )
   }
 
-par(xaxs = "i", yaxs = "i")
-plot(data$dem,
-     data$snodas,
-     pch=3,
-     cex = 0.1,
-     col = grey(level = 0.8, alpha = 0.8))
+normalize <- function(x, minVal = 0, maxVal = 1){
+  y <- (x - min(x, na.rm=T))/diff(range(x, na.rm=T))
+  y*(maxVal - minVal) + minVal
+}
 
+rData <-
+  extractPtsFromTwoRastersInPoly(baseRaster, extractRasters, polyObj)
 
+library(rgl)
+plot3d(rData$x, rData$y, rData$base, col = hsv(normalize(rData$extract)))
 

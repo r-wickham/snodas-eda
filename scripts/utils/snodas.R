@@ -188,4 +188,5 @@ untarSnodasFileToDir <- function(tarFileName){
 
 ### Test ----------------------------------------------------------------------
 
-# getSnodas() %>% plot()
+# s <- getSnodas()
+# plot(s)
