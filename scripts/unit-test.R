@@ -5,6 +5,13 @@
 # Load necessary functions
 source("webapp/global.R")
 
+### SNODAS --------------------------------------------------------------------
+
+s <- getSnodas()
+plot(s)
+
+### SNODAS-Terrain -----------------------------------------------------------
+
 # Load shapefile, DEM, and SNODAS
 polyObj <- rgdal::readOGR(dsn = "data/vector/test/WBDHU6.shp")
 baseRaster <- getOneArcSecDemFromShp(polyObj)
