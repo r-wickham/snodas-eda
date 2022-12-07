@@ -130,7 +130,7 @@ getMaxExtents <- function(exObj, roundDigit = 1){
 }
 
 #' Download the USGS 1-arc second DEM given an extent object or
-#'   an ojbect that may be converted to an shape object
+#'   an object that may be converted to an extent object
 #' @param shpObj Spatial* object that extents can be extracted from
 #' @return 1 arc-second raster spanning extents of Spatial* object
 getOneArcSecDemFromShp <- function(shpObj){
@@ -145,6 +145,9 @@ getOneArcSecDemFromShp <- function(shpObj){
     nwStrings <-
       shpObj %>%
       extentsToNWStrings()
+    cat(sprintf("\nDownloading %g DEMs:\n\t%s",
+                length(nwStrings),
+                paste0(nwStrings,collapse="\n\t")))
     # Create compute cluster
     cl <- makeCluster(min(detectCores()-1, length(nwStrings)))
     # Load libraries

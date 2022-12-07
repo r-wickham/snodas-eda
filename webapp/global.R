@@ -23,4 +23,6 @@ removeLog()
 
 # Load from config file to global environment
 configToGlobal()
- 
+
+# ensure we have directories set up
+if(!dir.exists("data")) dir.create("data")
