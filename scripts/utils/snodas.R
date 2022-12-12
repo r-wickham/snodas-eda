@@ -90,7 +90,7 @@ downloadSnodasTar <-
   function(dateObj = Sys.Date() - 1){
     toFile = sprintf("%s/%s.tar",
                      rawSnodasTarDir,
-                     format(Sys.Date(), "%Y-%m-%d"))
+                     format(dateObj, "%Y-%m-%d"))
     if(file.exists(toFile))
       return(toFile)
     urlString <- formSnodasDlurl(dateObj)

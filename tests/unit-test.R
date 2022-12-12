@@ -19,16 +19,20 @@ extractRasters <- getSnodas()
 
 
 ### CONTINUE HERE
-# May want to swap base/extract rasters
 # logic for polyObj = NULL
 
 extractPtsFromTwoRastersInPoly <-
   function(baseRaster, extractRasters, polyObj = NULL){
     
     tryCatch({
-      # Clip base and extract raster to polygon extents
-      b <- raster::crop(x = baseRaster, y = polyObj)
-      e <- raster::crop(x = extractRasters, y = polyObj)
+      if(is.null(polyObj)){
+        return(NULL) # placeholder
+      }else{
+        # Clip base and extract raster to polygon extents
+        b <- raster::crop(x = baseRaster, y = polyObj)
+        e <- raster::crop(x = extractRasters, y = polyObj)
+      }
+
       
       # Extract points from polygon
       pPts <- polyToPts(polyObj)
@@ -64,6 +68,16 @@ normalize <- function(x, minVal = 0, maxVal = 1){
 rData <-
   extractPtsFromTwoRastersInPoly(baseRaster, extractRasters, polyObj)
 
+# Plot terrain, colorized by SWE
 library(rgl)
 plot3d(rData$x, rData$y, rData$base, col = hsv(normalize(rData$extract)))
 
+# Plot extracted SWE
+plot3d(rData$x, rData$y, rData$extract)
+
+
+# Plot relationship of elevation to SWE
+pData <- rData %>% subset(inPoly  == 1 & extract > 0)
+plot(pData$base, pData$extract, pch=3,
+     cex=0.1, col = grey(0.3,0.3),
+     xlab = "Elevation (ft)", ylab = "SWE (in)")
