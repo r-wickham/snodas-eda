@@ -81,3 +81,15 @@ pData <- rData %>% subset(inPoly  == 1 & extract > 0)
 plot(pData$base, pData$extract, pch=3,
      cex=0.1, col = grey(0.3,0.3),
      xlab = "Elevation (ft)", ylab = "SWE (in)")
+
+# Multi-plot
+graphics::layout(matrix(c(1,2,3,3), 2,2, byrow=T))
+par(mar=c(4,4,2,2))
+plot(s)
+plot(polyObj, add=T, col="red")
+hist(pData$extract, main = "", xlab = "SWE (m)",freq=F)
+plot(pData$base, pData$extract, pch=3,
+     cex=0.1, col = grey(0.3,0.3),
+     xlab = "Elevation (ft)", ylab = "SWE (m)")
+
+

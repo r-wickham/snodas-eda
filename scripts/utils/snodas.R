@@ -8,7 +8,7 @@ library(doParallel)
 library(foreach)
 library(lubridate)
 library(purrr)
-library(rgdal)
+library(sp)
 library(tidyverse)
 
 ### Config --------------------------------------------------------------------
@@ -87,7 +87,7 @@ snodasCRS <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 #'                   SNODAS tar file
 #' @return         String, location of downloaded tar file
 downloadSnodasTar <- 
-  function(dateObj = Sys.Date() - 1){
+  function(dateObj = Sys.Date() - 1, rawSnodasTarDir = tempdir()){
     toFile = sprintf("%s/%s.tar",
                      rawSnodasTarDir,
                      format(dateObj, "%Y-%m-%d"))
@@ -112,7 +112,7 @@ formSnodasDlurl <- function(date){
     dateTag <- format(date,"%Y%m%d")
     tarFileName <- sprintf("SNODAS_%s.tar", dateTag)
     return(
-      sprintf("ftp://sidads.colorado.edu/DATASETS/NOAA/G02158/masked/%g/%s/%s",
+      sprintf("https://noaadata.apps.nsidc.org/NOAA//G02158/masked/%g/%s/%s",
               year(date), monthLabels[month(date)], tarFileName)
     )
   }, error = function(e){
